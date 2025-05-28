@@ -76,7 +76,6 @@ runAIProject ai2.txt --tree
 
 Generates a directory tree and saves it to `ai2.txt`.
 
-```
 ----------------------------------------------------------------
 
 ----------------------------------------------------------------
@@ -84,16 +83,15 @@ FILE: ai.php
 ---
 <?php
 
-
-function isBinary(string $path):bool
-{
-    if (!is_file($path) || !is_readable($path)) {
-        return true;
-    }
-    $sample = file_get_contents($path, false, null, 0, 512);
-
-    return preg_match('~[^\x09\x0A\x0D\x20-\x7E]~', $sample) === 1;
-}
+/**
+ * Generate a text-based dump of source files or a directory tree structure, suitable for AI processing.
+ *
+ * (c) 2025 Juergen Schwind <info@juergen-schwind.de>
+ * GitHub: https://github.com/jschwind/phpcli-symfony
+ *
+ * MIT License
+ *
+ */
 
 function dumpRelevantFiles(
     string $dir,
@@ -118,9 +116,6 @@ function dumpRelevantFiles(
                 continue;
             }
             if (in_array(pathinfo($item, PATHINFO_EXTENSION), $ignoreExtensions)) {
-                continue;
-            }
-            if (isBinary($path)) {
                 continue;
             }
 
@@ -313,6 +308,53 @@ if ($outputPath) {
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, STDOUT);
     }
 }
+
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+FILE: runAIProject.sh
+---
+#!/bin/bash
+
+MODE="dump"
+OUTPUT_FILE=""
+POSITIONAL_ARGS=()
+
+for arg in "$@"; do
+  case $arg in
+    --tree)
+      MODE="tree"
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$arg")
+      ;;
+  esac
+done
+
+# Nur eine mögliche Datei annehmen
+if [ ${#POSITIONAL_ARGS[@]} -ge 1 ]; then
+  OUTPUT_FILE="${POSITIONAL_ARGS[0]}"
+else
+  OUTPUT_FILE="ai.txt"
+fi
+
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+AI_SCRIPT="$SCRIPT_DIR/ai.php"
+
+if [ ! -f "$AI_SCRIPT" ]; then
+  echo "❌ ai.php not found in $SCRIPT_DIR"
+  exit 1
+fi
+
+OUTPUT_PATH="$PWD/$OUTPUT_FILE"
+
+CMD="php \"$AI_SCRIPT\""
+if [ "$MODE" = "tree" ]; then
+  CMD="$CMD --tree"
+fi
+CMD="$CMD \"$OUTPUT_PATH\""
+
+eval "$CMD"
 
 ----------------------------------------------------------------
 

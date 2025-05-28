@@ -1,15 +1,14 @@
 <?php
 
-
-function isBinary(string $path):bool
-{
-    if (!is_file($path) || !is_readable($path)) {
-        return true;
-    }
-    $sample = file_get_contents($path, false, null, 0, 512);
-
-    return preg_match('~[^\x09\x0A\x0D\x20-\x7E]~', $sample) === 1;
-}
+/**
+ * Generate a text-based dump of source files or a directory tree structure, suitable for AI processing.
+ *
+ * (c) 2025 Juergen Schwind <info@juergen-schwind.de>
+ * GitHub: https://github.com/jschwind/phpcli-symfony
+ *
+ * MIT License
+ *
+ */
 
 function dumpRelevantFiles(
     string $dir,
@@ -34,9 +33,6 @@ function dumpRelevantFiles(
                 continue;
             }
             if (in_array(pathinfo($item, PATHINFO_EXTENSION), $ignoreExtensions)) {
-                continue;
-            }
-            if (isBinary($path)) {
                 continue;
             }
 
