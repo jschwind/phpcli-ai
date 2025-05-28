@@ -1,0 +1,4 @@
+phpcli-ai/
+├── README.md
+├── ai.php
+└── runAIProject.sh

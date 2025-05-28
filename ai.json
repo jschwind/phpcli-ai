@@ -1,0 +1,18 @@
+{
+  "ignoreExtensions": [
+  ],
+  "ignoreFolders": [
+    ".git",
+    ".idea",
+    "examples"
+  ],
+  "ignoreFilenames": [
+    ".gitattributes",
+    ".gitignore",
+    "ai.json",
+    "ai.txt",
+    "LICENSE",
+    ".env.local",
+    "phpunit.xml"
+  ]
+}
