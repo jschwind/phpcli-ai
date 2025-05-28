@@ -72,5 +72,3 @@ runAIProject ai2.txt --tree
 ```
 
 Generates a directory tree and saves it to `ai2.txt`.
-
-```
