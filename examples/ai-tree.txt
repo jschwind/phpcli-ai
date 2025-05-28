@@ -1,4 +1,10 @@
+AI-ready directory tree for the project "phpcli-ai"
+================================================================
+
 phpcli-ai/
 ├── README.md
 ├── ai.php
 └── runAIProject.sh
+
+================================================================
+End of AI-ready directory tree for the project "phpcli-ai"

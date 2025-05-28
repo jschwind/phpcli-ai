@@ -200,6 +200,8 @@ if (file_exists($aiJsonPath) && is_readable($aiJsonPath)) {
     }
 }
 
+$projectName = basename($inputDir);
+
 // === Main Logic ===
 if ($outputPath) {
     $handle = fopen($outputPath, 'w');
@@ -209,19 +211,41 @@ if ($outputPath) {
     }
 
     if ($mode === 'tree') {
+        fwrite($handle, 'AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite($handle, str_repeat('=', 64).PHP_EOL);
+        fwrite($handle, PHP_EOL);
         fwrite($handle, basename($inputDir).'/'.PHP_EOL);
         printTree($inputDir, '', $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, $handle);
+        fwrite($handle, PHP_EOL);
+        fwrite($handle, str_repeat('=', 64).PHP_EOL);
+        fwrite($handle, 'End of AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL);
     } else {
+        fwrite($handle, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite($handle, str_repeat('=', 64).PHP_EOL);
+        fwrite($handle, PHP_EOL);
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, $handle);
+        fwrite($handle, str_repeat('=', 64).PHP_EOL);
+        fwrite($handle, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
     }
 
     fclose($handle);
     echo "AI-ready file output written to: $outputPath".PHP_EOL;
 } else {
     if ($mode === 'tree') {
+        echo 'AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL;
+        echo str_repeat('=', 64).PHP_EOL;
+        echo PHP_EOL;
         echo basename($inputDir).'/'.PHP_EOL;
         printTree($inputDir, '', $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir);
+        fwrite(STDOUT, PHP_EOL);
+        echo str_repeat('=', 64).PHP_EOL;
+        echo 'End of AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL;
     } else {
+        fwrite(STDOUT, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite(STDOUT, str_repeat('=', 64).PHP_EOL);
+        fwrite(STDOUT, PHP_EOL);
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, STDOUT);
+        fwrite(STDOUT, str_repeat('=', 64).PHP_EOL);
+        fwrite(STDOUT, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
     }
 }

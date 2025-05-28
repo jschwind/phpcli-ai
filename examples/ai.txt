@@ -1,3 +1,6 @@
+AI-ready file output for the project "phpcli-ai"
+================================================================
+
 ----------------------------------------------------------------
 FILE: README.md
 ---
@@ -283,6 +286,8 @@ if (file_exists($aiJsonPath) && is_readable($aiJsonPath)) {
     }
 }
 
+$projectName = basename($inputDir);
+
 // === Main Logic ===
 if ($outputPath) {
     $handle = fopen($outputPath, 'w');
@@ -295,7 +300,12 @@ if ($outputPath) {
         fwrite($handle, basename($inputDir).'/'.PHP_EOL);
         printTree($inputDir, '', $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, $handle);
     } else {
+        fwrite($handle, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite($handle, str_repeat('=', 64).PHP_EOL);
+        fwrite($handle, PHP_EOL);
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, $handle);
+        fwrite($handle, str_repeat('=', 64).PHP_EOL);
+        fwrite($handle, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
     }
 
     fclose($handle);
@@ -305,7 +315,12 @@ if ($outputPath) {
         echo basename($inputDir).'/'.PHP_EOL;
         printTree($inputDir, '', $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir);
     } else {
+        fwrite(STDOUT, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite(STDOUT, str_repeat('=', 64).PHP_EOL);
+        fwrite(STDOUT, PHP_EOL);
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, STDOUT);
+        fwrite(STDOUT, str_repeat('=', 64).PHP_EOL);
+        fwrite(STDOUT, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
     }
 }
 
@@ -358,3 +373,5 @@ eval "$CMD"
 
 ----------------------------------------------------------------
 
+================================================================
+End of AI-ready file output for the project "phpcli-ai"
