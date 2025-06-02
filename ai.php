@@ -24,7 +24,7 @@ function dumpRelevantFiles(
         $relative = ltrim(str_replace($baseDir, '', $path), DIRECTORY_SEPARATOR);
 
         if (is_dir($path)) {
-            if (in_array($item, $ignoreFolders)) {
+            if (in_array($item, $ignoreFolders) || in_array($relative, $ignoreFolders)) {
                 continue;
             }
             dumpRelevantFiles($path, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $baseDir, $outputHandle);
@@ -62,8 +62,9 @@ function printTree(
 
     foreach ($items as $index => $item) {
         $path = $dir.DIRECTORY_SEPARATOR.$item;
+        $relative = ltrim(str_replace($baseDir, '', $path), DIRECTORY_SEPARATOR);
 
-        if (is_dir($path) && in_array($item, $ignoreFolders)) {
+        if (is_dir($path) && (in_array($item, $ignoreFolders) || in_array($relative, $ignoreFolders))) {
             continue;
         }
         if (in_array($item, $ignoreFilenames)) {
@@ -167,6 +168,7 @@ $ignoreFolders = [
 $ignoreFilenames = [
     'ai.php',
     'ai.txt',
+    'ai.json',
     '.env.local',
     '.gitignore',
     '.gitattributes',
@@ -219,6 +221,8 @@ if ($outputPath) {
         fwrite($handle, PHP_EOL);
         fwrite($handle, str_repeat('=', 64).PHP_EOL);
         fwrite($handle, 'End of AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite($handle, PHP_EOL);
+        fwrite($handle, 'Remember this project as "'.$projectName.'" and wait for further instructions.'.PHP_EOL);
     } else {
         fwrite($handle, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
         fwrite($handle, str_repeat('=', 64).PHP_EOL);
@@ -226,6 +230,8 @@ if ($outputPath) {
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, $handle);
         fwrite($handle, str_repeat('=', 64).PHP_EOL);
         fwrite($handle, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite($handle, PHP_EOL);
+        fwrite($handle, 'Remember this project as "'.$projectName.'" and wait for further instructions.'.PHP_EOL);
     }
 
     fclose($handle);
@@ -240,6 +246,8 @@ if ($outputPath) {
         fwrite(STDOUT, PHP_EOL);
         echo str_repeat('=', 64).PHP_EOL;
         echo 'End of AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL;
+        echo PHP_EOL;
+        echo 'Remember this project as "'.$projectName.'" and wait for further instructions.';
     } else {
         fwrite(STDOUT, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
         fwrite(STDOUT, str_repeat('=', 64).PHP_EOL);
@@ -247,5 +255,7 @@ if ($outputPath) {
         dumpRelevantFiles($inputDir, $ignoreExtensions, $ignoreFolders, $ignoreFilenames, $inputDir, STDOUT);
         fwrite(STDOUT, str_repeat('=', 64).PHP_EOL);
         fwrite(STDOUT, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
+        fwrite(STDOUT, PHP_EOL);
+        fwrite(STDOUT, 'Remember this project as "'.$projectName.'" and wait for further instructions.');
     }
 }
