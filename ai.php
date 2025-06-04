@@ -166,6 +166,7 @@ $ignoreFolders = [
     'src/Test'
 ];
 $ignoreFilenames = [
+    'package-lock.json',
     'ai.php',
     'ai.txt',
     'ai.json',
