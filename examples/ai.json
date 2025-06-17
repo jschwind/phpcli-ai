@@ -20,6 +20,7 @@
     ".git",
     ".idea",
     "build",
+    "bin",
     "cache",
     "data",
     "doc",
@@ -60,6 +61,7 @@
     "phpstan.neon",
     "phpstan.neon.dist",
     "rector.php",
-    "rector.php.dist"
+    "rector.php.dist",
+    "symfony.lock"
   ]
 }

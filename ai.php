@@ -175,6 +175,7 @@ $ignoreFolders = [
     '.git',
     '.idea',
     'build',
+    'bin',
     'cache',
     'data',
     'doc',
@@ -206,7 +207,6 @@ $ignoreFilenames = [
     'ai.json',
     'ai.php',
     'ai.txt',
-    'composer.json',
     'composer.lock',
     'docker-compose.yml',
     'package-lock.json',
@@ -216,6 +216,7 @@ $ignoreFilenames = [
     'phpstan.neon.dist',
     'rector.php',
     'rector.php.dist',
+    'symfony.lock',
 ];
 
 $aiJsonPath = $inputDir.DIRECTORY_SEPARATOR.'ai.json';
