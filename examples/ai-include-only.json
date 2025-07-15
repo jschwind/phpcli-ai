@@ -1,0 +1,7 @@
+{
+  "exclude": {
+    "extensions": ["mp4", "zip"],
+    "folders": ["build", "dist"],
+    "filenames": ["docker-compose.yml", "phpunit.xml"]
+  }
+}

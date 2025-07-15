@@ -2,17 +2,17 @@
   "ignoreExtensions": [
   ],
   "ignoreFolders": [
-    ".git",
-    ".idea",
-    "examples"
   ],
   "ignoreFilenames": [
-    ".gitattributes",
-    ".gitignore",
-    "ai.json",
-    "ai.txt",
-    "LICENSE",
-    ".env.local",
-    "phpunit.xml"
-  ]
+  ],
+  "exclude": {
+    "extensions": [],
+    "folders": [],
+    "filenames": []
+  },
+  "include": {
+    "extensions": [],
+    "folders": [],
+    "filenames": []
+  }
 }
