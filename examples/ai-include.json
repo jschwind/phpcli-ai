@@ -1,0 +1,7 @@
+{
+  "include": {
+    "extensions": ["php", "json"],
+    "folders": ["src", "config"],
+    "filenames": ["index.php", "composer.json"]
+  }
+}
