@@ -124,22 +124,27 @@ final class AIProjectDumper
             $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($fullPath);
 
-            if ($isDir && $this->isExcludedFolder($relative, $item)) {
-                continue;
-            }
+            if ($isDir) {
+                if ($this->isExcludedFolder($relative, $item)) {
+                    continue;
+                }
 
-            if (!$isDir) {
+                // 🔁 Rekursive Prüfung
+                if ($this->hasIncludedChildren($fullPath, $relative . '/')) {
+                    return true;
+                }
+            } else {
                 $ext = pathinfo($item, PATHINFO_EXTENSION);
                 if (in_array($ext, $this->excludeExtensions, true)) {
                     continue;
                 }
-            }
 
-            if (!$this->shouldInclude($relative, $item, $isDir)) {
-                continue;
-            }
+                if (!$this->shouldInclude($relative, $item, false)) {
+                    continue;
+                }
 
-            return true;
+                return true;
+            }
         }
 
         return false;
