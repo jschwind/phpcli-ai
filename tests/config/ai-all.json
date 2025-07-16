@@ -1,0 +1,12 @@
+{
+  "exclude": {
+    "extensions": [],
+    "folders": [],
+    "filenames": ["/lvl1/lvl2/test.php"]
+  },
+  "include": {
+    "extensions": ["php"],
+    "folders": [],
+    "filenames": []
+  }
+}

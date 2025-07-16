@@ -1,0 +1,12 @@
+{
+  "exclude": {
+    "extensions": ["php"],
+    "folders": [],
+    "filenames": []
+  },
+  "include": {
+    "extensions": [],
+    "folders": [],
+    "filenames": []
+  }
+}
