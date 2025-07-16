@@ -11,7 +11,6 @@ final class AIProjectDumper
     private string $projectDir;
     private string $mode;
     private ?string $outputPath;
-    private ?array $config;
 
     private array $includeExtensions = [];
     private array $includeFolders = [];
@@ -41,8 +40,6 @@ final class AIProjectDumper
         }
 
         $json = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-
-        $this->config = $json;
 
         $this->excludeExtensions = $json['exclude']['extensions'] ?? [];
         $this->excludeFolders = $json['exclude']['folders'] ?? [];
@@ -96,7 +93,6 @@ final class AIProjectDumper
 
     private function shouldInclude(string $relativePath, string $filename, bool $isDir): bool
     {
-        // Exclusion logic
         foreach ($this->excludeFilenames as $exFile) {
             if (str_starts_with($exFile, '/')) {
                 if ('/' . $relativePath === $exFile) {
@@ -128,7 +124,7 @@ final class AIProjectDumper
             $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($fullPath);
 
-            if ($isDir && in_array($item, $this->excludeFolders, true)) {
+            if ($isDir && $this->isExcludedFolder($relative, $item)) {
                 continue;
             }
 
@@ -143,8 +139,22 @@ final class AIProjectDumper
                 continue;
             }
 
-            // Entweder Datei passt oder Ordner mit Inhalt
             return true;
+        }
+
+        return false;
+    }
+
+    private function isExcludedFolder(string $relativePath, string $folderName): bool
+    {
+        foreach ($this->excludeFolders as $excluded) {
+            if (str_starts_with($excluded, '/')) {
+                if ('/' . $relativePath === $excluded) {
+                    return true;
+                }
+            } elseif ($folderName === $excluded) {
+                return true;
+            }
         }
 
         return false;
@@ -161,7 +171,7 @@ final class AIProjectDumper
             $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($path);
 
-            if ($isDir && in_array($item, $this->excludeFolders, true)) {
+            if ($isDir && $this->isExcludedFolder($relative, $item)) {
                 continue;
             }
 
@@ -199,7 +209,7 @@ final class AIProjectDumper
             $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($path);
 
-            if ($isDir && in_array($item, $this->excludeFolders, true)) {
+            if ($isDir && $this->isExcludedFolder($relative, $item)) {
                 continue;
             }
 
