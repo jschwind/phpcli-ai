@@ -119,6 +119,37 @@ final class AIProjectDumper
         return empty($this->includeExtensions) || in_array($ext, $this->includeExtensions, true);
     }
 
+    private function hasIncludedChildren(string $path, string $relativePrefix = ''): bool
+    {
+        $items = array_diff(scandir($path) ?: [], ['.', '..']);
+
+        foreach ($items as $item) {
+            $fullPath = $path . DIRECTORY_SEPARATOR . $item;
+            $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
+            $isDir = is_dir($fullPath);
+
+            if ($isDir && in_array($item, $this->excludeFolders, true)) {
+                continue;
+            }
+
+            if (!$isDir) {
+                $ext = pathinfo($item, PATHINFO_EXTENSION);
+                if (in_array($ext, $this->excludeExtensions, true)) {
+                    continue;
+                }
+            }
+
+            if (!$this->shouldInclude($relative, $item, $isDir)) {
+                continue;
+            }
+
+            // Entweder Datei passt oder Ordner mit Inhalt
+            return true;
+        }
+
+        return false;
+    }
+
     private function dumpFiles(string $dir, $handle, string $relativePrefix = ''): void
     {
         foreach (scandir($dir) ?: [] as $item) {
@@ -189,6 +220,10 @@ final class AIProjectDumper
         $count = count($items);
 
         foreach ($items as $index => $entry) {
+            if ($entry['isDir'] && !$this->hasIncludedChildren($entry['path'], $entry['relative'] . '/')) {
+                continue;
+            }
+
             $isLast = $index === $count - 1;
             $connector = $isLast ? '└── ' : '├── ';
             fwrite($handle, $prefix . $connector . $entry['name'] . ($entry['isDir'] ? '/' : '') . "\n");
