@@ -1,14 +1,8 @@
 {
-  "ignoreExtensions": [
-  ],
-  "ignoreFolders": [
-  ],
-  "ignoreFilenames": [
-  ],
   "exclude": {
     "extensions": [],
-    "folders": [],
-    "filenames": []
+    "folders": [".git", ".idea", "/tests/result"],
+    "filenames": [".gitattributes", ".gitignore", "ai.txt", "LICENSE", "LICENSE"]
   },
   "include": {
     "extensions": [],
