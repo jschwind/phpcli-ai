@@ -2,6 +2,7 @@
 
 MODE="dump"
 OUTPUT_FILE=""
+CONFIG_PATH=""
 POSITIONAL_ARGS=()
 
 for arg in "$@"; do
@@ -9,13 +10,15 @@ for arg in "$@"; do
     --tree)
       MODE="tree"
       ;;
+    --config=*)
+      CONFIG_PATH="$arg"
+      ;;
     *)
       POSITIONAL_ARGS+=("$arg")
       ;;
   esac
 done
 
-# Nur eine mögliche Datei annehmen
 if [ ${#POSITIONAL_ARGS[@]} -ge 1 ]; then
   OUTPUT_FILE="${POSITIONAL_ARGS[0]}"
 else
@@ -33,9 +36,15 @@ fi
 OUTPUT_PATH="$PWD/$OUTPUT_FILE"
 
 CMD="php \"$AI_SCRIPT\""
+
 if [ "$MODE" = "tree" ]; then
   CMD="$CMD --tree"
 fi
+
+if [ -n "$CONFIG_PATH" ]; then
+  CMD="$CMD $CONFIG_PATH"
+fi
+
 CMD="$CMD \"$OUTPUT_PATH\""
 
 eval "$CMD"
