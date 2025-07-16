@@ -1,342 +1,237 @@
 <?php
 
-/**
- * Generate a text-based dump of source files or a directory tree structure, suitable for AI processing.
- *
- * (c) 2025 Juergen Schwind <info@juergen-schwind.de>
- * GitHub: https://github.com/jschwind/phpcli-symfony
- *
- * MIT License
- */
+declare(strict_types=1);
 
-function shouldInclude(string $item, string $relative, bool $isDir, array $includes): bool
+namespace AIDumper;
+
+use RuntimeException;
+
+final class AIProjectDumper
 {
-    if (empty($includes)) {
-        return true;
+    private string $projectDir;
+    private string $mode;
+    private ?string $outputPath;
+    private ?array $config;
+
+    private array $includeExtensions = [];
+    private array $includeFolders = [];
+    private array $includeFilenames = [];
+
+    private array $excludeExtensions = [];
+    private array $excludeFolders = [];
+    private array $excludeFilenames = [];
+
+    public function __construct(
+        string $projectDir,
+        string $mode = 'dump',
+        ?string $outputPath = null,
+        ?string $configPath = null
+    ) {
+        $this->projectDir = realpath($projectDir) ?: throw new RuntimeException("Invalid project directory: $projectDir");
+        $this->mode = $mode;
+        $this->outputPath = $outputPath;
+        $this->loadConfig($configPath);
     }
 
-    [$exts, $folders, $files] = $includes;
-
-    if ($isDir) {
-        return in_array($item, $folders, true) || in_array($relative, $folders, true);
-    }
-
-    if (in_array($item, $files, true)) {
-        return true;
-    }
-
-    $ext = pathinfo($item, PATHINFO_EXTENSION);
-    return in_array($ext, $exts, true);
-}
-
-function dumpRelevantFiles(
-    string $dir,
-    array $ignoreExtensions,
-    array $globalIgnoreFolders,
-    array $rootIgnoreFolders,
-    array $globalIgnoreFilenames,
-    array $rootIgnoreFilenames,
-    ?array $includeFilters,
-    string $baseDir,
-    $outputHandle
-): void {
-    $items = array_diff(scandir($dir), ['.', '..']);
-    foreach ($items as $item) {
-        $path = $dir.DIRECTORY_SEPARATOR.$item;
-        $relative = ltrim(str_replace($baseDir, '', $path), DIRECTORY_SEPARATOR);
-        $isDir = is_dir($path);
-
-        // INCLUDE OVERRIDE
-        if ($includeFilters !== null && !shouldInclude($item, $relative, $isDir, $includeFilters)) {
-            continue;
+    private function loadConfig(?string $configPath): void
+    {
+        $path = $configPath ?? $this->projectDir . DIRECTORY_SEPARATOR . 'ai.json';
+        if (!is_readable($path)) {
+            return;
         }
 
-        // EXCLUDE FILTERS (only used if include is not set)
-        if ($includeFilters === null) {
-            if ($isDir) {
-                if (in_array($item, $globalIgnoreFolders, true) || in_array($relative, $rootIgnoreFolders, true)) {
-                    continue;
+        $json = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->config = $json;
+
+        $this->excludeExtensions = $json['exclude']['extensions'] ?? [];
+        $this->excludeFolders = $json['exclude']['folders'] ?? [];
+        $this->excludeFilenames = $json['exclude']['filenames'] ?? [];
+
+        $this->includeExtensions = $json['include']['extensions'] ?? [];
+        $this->includeFolders = $json['include']['folders'] ?? [];
+        $this->includeFilenames = $json['include']['filenames'] ?? [];
+    }
+
+    public function run(): void
+    {
+        $outputHandle = $this->outputPath ? fopen($this->outputPath, 'w') : STDOUT;
+
+        if (!$outputHandle) {
+            throw new RuntimeException("Failed to open output path: {$this->outputPath}");
+        }
+
+        $projectName = basename($this->projectDir);
+
+        $this->writeHeader($outputHandle, $projectName);
+
+        if ($this->mode === 'tree') {
+            $this->printTree($this->projectDir, '', $outputHandle);
+        } else {
+            $this->dumpFiles($this->projectDir, $outputHandle);
+        }
+
+        $this->writeFooter($outputHandle, $projectName);
+
+        if (is_resource($outputHandle) && $outputHandle !== STDOUT) {
+            fclose($outputHandle);
+        }
+    }
+
+    private function writeHeader($handle, string $name): void
+    {
+        fwrite($handle, "AI-ready " . ($this->mode === 'tree' ? "directory tree" : "file output") . " for the project \"$name\"\n");
+        fwrite($handle, str_repeat('=', 64) . "\n\n");
+        if ($this->mode === 'tree') {
+            fwrite($handle, basename($this->projectDir) . "/\n");
+        }
+    }
+
+    private function writeFooter($handle, string $name): void
+    {
+        fwrite($handle, str_repeat('=', 64) . "\n");
+        fwrite($handle, "End of AI-ready " . ($this->mode === 'tree' ? "directory tree" : "file output") . " for the project \"$name\"\n\n");
+        fwrite($handle, "Remember this project as \"$name\" and wait for further instructions.\n");
+    }
+
+    private function shouldInclude(string $relativePath, string $filename, bool $isDir): bool
+    {
+        // Exclusion logic
+        foreach ($this->excludeFilenames as $exFile) {
+            if (str_starts_with($exFile, '/')) {
+                if ('/' . $relativePath === $exFile) {
+                    return false;
                 }
-            } else {
-                if (
-                    in_array($item, $globalIgnoreFilenames, true) ||
-                    (strpos($relative, DIRECTORY_SEPARATOR) === false && in_array($item, $rootIgnoreFilenames, true)) ||
-                    in_array(pathinfo($item, PATHINFO_EXTENSION), $ignoreExtensions, true)
-                ) {
-                    continue;
-                }
+            } elseif (str_contains($relativePath, $exFile)) {
+                return false;
             }
         }
 
         if ($isDir) {
-            dumpRelevantFiles(
-                $path,
-                $ignoreExtensions,
-                $globalIgnoreFolders,
-                $rootIgnoreFolders,
-                $globalIgnoreFilenames,
-                $rootIgnoreFilenames,
-                $includeFilters,
-                $baseDir,
-                $outputHandle
-            );
-        } else {
-            $content = file_get_contents($path);
-            fwrite($outputHandle, str_repeat('-', 64).PHP_EOL);
-            fwrite($outputHandle, "FILE: $relative".PHP_EOL);
-            fwrite($outputHandle, "---".PHP_EOL);
-            fwrite($outputHandle, $content.PHP_EOL);
-            fwrite($outputHandle, str_repeat('-', 64).PHP_EOL);
-            fwrite($outputHandle, PHP_EOL);
+            return empty($this->includeFolders) || in_array($filename, $this->includeFolders, true);
         }
+
+        if (!empty($this->includeFilenames) && !in_array($filename, $this->includeFilenames, true)) {
+            return false;
+        }
+
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        return empty($this->includeExtensions) || in_array($ext, $this->includeExtensions, true);
     }
-}
 
-function printTree(
-    string $dir,
-    string $prefix = '',
-    array $ignoreExtensions = [],
-    array $globalIgnoreFolders = [],
-    array $rootIgnoreFolders = [],
-    array $globalIgnoreFilenames = [],
-    array $rootIgnoreFilenames = [],
-    ?array $includeFilters = null,
-    string $baseDir = '',
-    $outputFile = null
-): void {
-    $items = array_values(array_diff(scandir($dir), ['.', '..']));
-    $count = count($items);
+    private function dumpFiles(string $dir, $handle, string $relativePrefix = ''): void
+    {
+        foreach (scandir($dir) ?: [] as $item) {
+            if (in_array($item, ['.', '..'], true)) {
+                continue;
+            }
 
-    foreach ($items as $index => $item) {
-        $path = $dir.DIRECTORY_SEPARATOR.$item;
-        $relative = ltrim(str_replace($baseDir, '', $path), DIRECTORY_SEPARATOR);
-        $isDir = is_dir($path);
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
+            $isDir = is_dir($path);
 
-        // INCLUDE OVERRIDE
-        if ($includeFilters !== null && !shouldInclude($item, $relative, $isDir, $includeFilters)) {
-            continue;
-        }
+            if ($isDir && in_array($item, $this->excludeFolders, true)) {
+                continue;
+            }
 
-        // EXCLUDE FILTERS (only used if include is not set)
-        if ($includeFilters === null) {
-            if ($isDir) {
-                if (in_array($item, $globalIgnoreFolders, true) || in_array($relative, $rootIgnoreFolders, true)) {
-                    continue;
-                }
-            } else {
-                if (
-                    in_array($item, $globalIgnoreFilenames, true) ||
-                    (strpos($relative, DIRECTORY_SEPARATOR) === false && in_array($item, $rootIgnoreFilenames, true)) ||
-                    in_array(pathinfo($item, PATHINFO_EXTENSION), $ignoreExtensions, true)
-                ) {
+            if (!$isDir) {
+                $ext = pathinfo($item, PATHINFO_EXTENSION);
+                if (in_array($ext, $this->excludeExtensions, true)) {
                     continue;
                 }
             }
+
+            if (!$this->shouldInclude($relative, $item, $isDir)) {
+                continue;
+            }
+
+            if ($isDir) {
+                $this->dumpFiles($path, $handle, $relative . '/');
+            } else {
+                fwrite($handle, str_repeat('-', 64) . "\n");
+                fwrite($handle, "FILE: $relative\n");
+                fwrite($handle, "---\n");
+                fwrite($handle, file_get_contents($path) . "\n");
+                fwrite($handle, str_repeat('-', 64) . "\n\n");
+            }
+        }
+    }
+
+    private function printTree(string $dir, string $prefix, $handle, string $relativePrefix = ''): void
+    {
+        $rawItems = array_diff(scandir($dir) ?: [], ['.', '..']);
+
+        $items = [];
+
+        foreach ($rawItems as $item) {
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
+            $isDir = is_dir($path);
+
+            if ($isDir && in_array($item, $this->excludeFolders, true)) {
+                continue;
+            }
+
+            if (!$isDir) {
+                $ext = pathinfo($item, PATHINFO_EXTENSION);
+                if (in_array($ext, $this->excludeExtensions, true)) {
+                    continue;
+                }
+            }
+
+            if (!$this->shouldInclude($relative, $item, $isDir)) {
+                continue;
+            }
+
+            $items[] = ['name' => $item, 'path' => $path, 'relative' => $relative, 'isDir' => $isDir];
         }
 
-        $isLast = $index === $count - 1;
-        $connector = $isLast ? '└── ' : '├── ';
-        $line = $prefix.$connector.$item.($isDir ? '/' : '').PHP_EOL;
+        $count = count($items);
 
-        if ($outputFile) {
-            fwrite($outputFile, $line);
-        } else {
-            echo $line;
-        }
+        foreach ($items as $index => $entry) {
+            $isLast = $index === $count - 1;
+            $connector = $isLast ? '└── ' : '├── ';
+            fwrite($handle, $prefix . $connector . $entry['name'] . ($entry['isDir'] ? '/' : '') . "\n");
 
-        if ($isDir) {
-            $newPrefix = $prefix.($isLast ? '    ' : '│   ');
-            printTree(
-                $path,
-                $newPrefix,
-                $ignoreExtensions,
-                $globalIgnoreFolders,
-                $rootIgnoreFolders,
-                $globalIgnoreFilenames,
-                $rootIgnoreFilenames,
-                $includeFilters,
-                $baseDir,
-                $outputFile
-            );
+            if ($entry['isDir']) {
+                $newPrefix = $prefix . ($isLast ? '    ' : '│   ');
+                $this->printTree($entry['path'], $newPrefix, $handle, $entry['relative'] . '/');
+            }
         }
     }
 }
 
-// Argumente
-$args = $argv;
-array_shift($args);
-$mode = 'dump';
-if (in_array('--tree', $args, true)) {
-    $mode = 'tree';
-    $args = array_values(array_filter($args, fn($a) => $a !== '--tree'));
+$mode = in_array('--tree', $argv, true) ? 'tree' : 'dump';
+$config = '--config=';
+
+$configPath = null;
+foreach ($argv as $arg) {
+    if (str_starts_with($arg, $config)) {
+        $configPath = substr($arg, strlen($config));
+    }
 }
+
 $inputDir = getcwd();
 $outputPath = null;
-if (count($args) === 1) {
-    if (is_dir($args[0])) {
-        $inputDir = realpath($args[0]);
+
+$args = array_values(array_filter($argv, fn($arg) => !str_starts_with($arg, '--')));
+$paths = array_values(array_filter($argv, fn($arg) => !str_starts_with($arg, '--')));
+
+if (count($paths) === 2) {
+    [$script, $possibleDirOrFile] = $paths;
+
+    if (is_dir($possibleDirOrFile)) {
+        $inputDir = realpath($possibleDirOrFile);
     } else {
-        $outputPath = $args[0];
-    }
-} elseif (count($args) >= 2) {
-    $inputDir = realpath($args[0]);
-    $outputPath = $args[1];
-}
-if (!$inputDir || !is_dir($inputDir)) {
-    echo "Invalid directory: $inputDir".PHP_EOL;
-    exit(1);
-}
-
-// === Konfiguration ===
-$ignoreExtensions = ['bin','dll','exe','gif','gz','ico','jpeg','jpg','log','pdf','png','svg','tar','tmp','zip'];
-$ignoreFolders = ['.git','.idea','build','bin','cache','data','doc','docs','dist','docker','example','examples','logs','node_modules','public','src/Test','src/Tests','storage','test','tests','tmp','vendor','var'];
-$ignoreFilenames = ['.env.local','.gitattributes','.gitignore','.gitlab-ci.yml','CHANGELOG.md','CONTRIBUTING.md','LICENSE','ai.json','ai.php','ai.txt','composer.lock','docker-compose.yml','package-lock.json','phpunit.xml','phpunit.xml.dist','phpstan.neon','phpstan.neon.dist','rector.php','rector.php.dist','symfony.lock'];
-
-// Optional: ai.json einlesen
-$aiJsonPath = $inputDir.DIRECTORY_SEPARATOR.'ai.json';
-$includeFilters = null;
-
-if (is_readable($aiJsonPath) && ($json = json_decode(file_get_contents($aiJsonPath), true))) {
-    // exclude ergänzt ignore
-    if (isset($json['ignoreExtensions'])) {
-        $ignoreExtensions = array_merge($ignoreExtensions, (array)$json['ignoreExtensions']);
-    }
-    if (isset($json['ignoreFolders'])) {
-        $ignoreFolders = array_merge($ignoreFolders, (array)$json['ignoreFolders']);
-    }
-    if (isset($json['ignoreFilenames'])) {
-        $ignoreFilenames = array_merge($ignoreFilenames, (array)$json['ignoreFilenames']);
-    }
-    if (isset($json['exclude'])) {
-        $ex = $json['exclude'];
-        if (isset($ex['extensions'])) {
-            $ignoreExtensions = array_merge($ignoreExtensions, (array)$ex['extensions']);
-        }
-        if (isset($ex['folders'])) {
-            $ignoreFolders = array_merge($ignoreFolders, (array)$ex['folders']);
-        }
-        if (isset($ex['filenames'])) {
-            $ignoreFilenames = array_merge($ignoreFilenames, (array)$ex['filenames']);
-        }
-    }
-
-    // include hat Vorrang vor exclude/ignore
-    if (isset($json['include']) && is_array($json['include'])) {
-        $incs = $json['include'];
-        $includeExtensions = isset($incs['extensions']) && is_array($incs['extensions']) ? $incs['extensions'] : [];
-        $includeFolders = isset($incs['folders']) && is_array($incs['folders']) ? $incs['folders'] : [];
-        $includeFilenames = isset($incs['filenames']) && is_array($incs['filenames']) ? $incs['filenames'] : [];
-
-        if ($includeExtensions || $includeFolders || $includeFilenames) {
-            $includeFilters = [$includeExtensions, $includeFolders, $includeFilenames];
-        }
+        $outputPath = $possibleDirOrFile;
     }
 }
 
-// Trennung root vs. global
-$globalIgnoreFolders = [];
-$rootIgnoreFolders = [];
-foreach ($ignoreFolders as $f) {
-    if (str_starts_with($f, '/')) {
-        $rootIgnoreFolders[] = ltrim($f, '/');
-    } else {
-        $globalIgnoreFolders[] = $f;
-    }
-}
-$globalIgnoreFilenames = [];
-$rootIgnoreFilenames = [];
-foreach ($ignoreFilenames as $f) {
-    if (str_starts_with($f, '/')) {
-        $rootIgnoreFilenames[] = ltrim($f, '/');
-    } else {
-        $globalIgnoreFilenames[] = $f;
-    }
+if (count($paths) === 3) {
+    [, $dirCandidate, $fileCandidate] = $paths;
+    $inputDir = is_dir($dirCandidate) ? realpath($dirCandidate) : getcwd();
+    $outputPath = $fileCandidate;
 }
 
-$projectName = basename($inputDir);
-
-if ($outputPath) {
-    $handle = fopen($outputPath, 'w');
-    if (!$handle) {
-        echo "Could not open file for writing: $outputPath".PHP_EOL;
-        exit(1);
-    }
-
-    if ($mode === 'tree') {
-        fwrite($handle, 'AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL);
-        fwrite($handle, str_repeat('=', 64).PHP_EOL.PHP_EOL);
-        fwrite($handle, basename($inputDir).'/'.PHP_EOL);
-        printTree(
-            $inputDir,
-            '',
-            $ignoreExtensions,
-            $globalIgnoreFolders,
-            $rootIgnoreFolders,
-            $globalIgnoreFilenames,
-            $rootIgnoreFilenames,
-            $includeFilters,
-            $inputDir,
-            $handle
-        );
-        fwrite($handle, PHP_EOL.str_repeat('=', 64).PHP_EOL);
-        fwrite($handle, 'End of AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL.PHP_EOL);
-        fwrite($handle, 'Remember this project as "'.$projectName.'" and wait for further instructions.'.PHP_EOL);
-    } else {
-        fwrite($handle, 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL);
-        fwrite($handle, str_repeat('=', 64).PHP_EOL.PHP_EOL);
-        dumpRelevantFiles(
-            $inputDir,
-            $ignoreExtensions,
-            $globalIgnoreFolders,
-            $rootIgnoreFolders,
-            $globalIgnoreFilenames,
-            $rootIgnoreFilenames,
-            $includeFilters,
-            $inputDir,
-            $handle
-        );
-        fwrite($handle, str_repeat('=', 64).PHP_EOL);
-        fwrite($handle, 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL.PHP_EOL);
-        fwrite($handle, 'Remember this project as "'.$projectName.'" and wait for further instructions.'.PHP_EOL);
-    }
-
-    fclose($handle);
-    echo "AI-ready output written to: $outputPath".PHP_EOL;
-} else {
-    if ($mode === 'tree') {
-        echo 'AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL;
-        echo str_repeat('=', 64).PHP_EOL.PHP_EOL;
-        echo basename($inputDir).'/'.PHP_EOL;
-        printTree(
-            $inputDir,
-            '',
-            $ignoreExtensions,
-            $globalIgnoreFolders,
-            $rootIgnoreFolders,
-            $globalIgnoreFilenames,
-            $rootIgnoreFilenames,
-            $includeFilters,
-            $inputDir
-        );
-        echo PHP_EOL.str_repeat('=', 64).PHP_EOL;
-        echo 'End of AI-ready directory tree for the project "'.$projectName.'"'.PHP_EOL.PHP_EOL;
-        echo 'Remember this project as "'.$projectName.'" and wait for further instructions.'.PHP_EOL;
-    } else {
-        echo 'AI-ready file output for the project "'.$projectName.'"'.PHP_EOL;
-        echo str_repeat('=', 64).PHP_EOL.PHP_EOL;
-        dumpRelevantFiles(
-            $inputDir,
-            $ignoreExtensions,
-            $globalIgnoreFolders,
-            $rootIgnoreFolders,
-            $globalIgnoreFilenames,
-            $rootIgnoreFilenames,
-            $includeFilters,
-            $inputDir,
-            STDOUT
-        );
-        echo str_repeat('=', 64).PHP_EOL;
-        echo 'End of AI-ready file output for the project "'.$projectName.'"'.PHP_EOL.PHP_EOL;
-        echo 'Remember this project as "'.$projectName.'" and wait for further instructions.'.PHP_EOL;
-    }
-}
+$dumper = new AIProjectDumper($inputDir, $mode, $outputPath, $configPath);
+$dumper->run();
