@@ -130,7 +130,6 @@ final class AIProjectDumper
                     continue;
                 }
 
-                // 🔁 Rekursive Prüfung
                 if ($this->hasIncludedChildren($fullPath, $relative . '/')) {
                     return true;
                 }
