@@ -1,74 +1,88 @@
 # PHPCLI-AI
 
-Generate a text-based dump of source files or a directory tree structure, suitable for AI processing.
+A CLI tool that generates a text-based dump of source files or a directory tree structure — ideal for processing by AI systems.
 
-## Installation
+## 🔧 Installation
 
-```shell
+```bash
 git clone https://github.com/jschwind/phpcli-ai.git
 cd phpcli-ai
 chmod +x runAIProject.sh
-````
+```
 
-Add `runAIProject.sh` to your PATH or create a symlink, e.g., on Arch/Manjaro Linux via `~/.bashrc`:
+Optionally, add `runAIProject.sh` to your system’s `PATH`. For example, on Arch/Manjaro:
 
-```shell
+```bash
 sudo ln -s $(pwd)/runAIProject.sh /usr/local/bin/runAIProject
 ```
 
-## Usage
+## 🚀 Usage
 
-```shell
-runAIProject [OUTPUT_FILENAME] [--tree]
+```bash
+runAIProject [OUTPUT_FILENAME] [--tree] [--config=PATH_TO_CONFIG]
 ```
 
-Generates a dump of relevant project files or a directory tree. By default, the output is written to `ai.txt` in the current directory.
+By default, this command generates a text dump of the current directory’s source files and saves it to `ai.txt`.
 
 ### Options
 
-* `OUTPUT_FILENAME`: Optional. Name of the output file (default: `ai.txt`)
-* `--tree`: Optional. Generates a directory tree instead of a file dump
+* `OUTPUT_FILENAME` (optional): Custom name for the output file (default: `ai.txt`)
+* `--tree` (optional): Outputs a directory tree instead of dumping file contents
+* `--config=...` (optional): Use a specific `ai.json` configuration file
 
-## ai.json Support
+## 🧠 `ai.json` Configuration
 
-You can customize which files and folders are excluded from the output by placing an `ai.json` file in the root of your project. This overrides the default ignore rules.
+You can control which files and folders are included or excluded by providing an `ai.json` file in your project’s root directory. This will override the default rules.
 
-### Example `ai.json`:
+### Structure of `ai.json`
 
 ```json
 {
-  "ignoreExtensions": ["log", "png", "jpg"],
-  "ignoreFolders": ["vendor", "node_modules", "tests"],
-  "ignoreFilenames": ["README.md", ".env"]
+  "exclude": {
+    "extensions": ["log", "png", "jpg"],
+    "folders": ["vendor", "node_modules", "tests"],
+    "filenames": ["README.md", ".env"]
+  },
+  "include": {
+    "extensions": [],
+    "folders": [],
+    "filenames": []
+  }
 }
 ```
 
 ### Priority
 
-If `ai.json` is present and readable in the target directory, its values will be used instead of the default ignore lists.
+If `ai.json` is present and readable, its values will override the default ignore lists.
 
-## Examples
+## 📦 Examples
 
-```shell
+```bash
 runAIProject
 ```
 
-Dumps source content into `ai.txt`.
+Generates a file dump and writes it to `ai.txt`.
 
-```shell
+```bash
 runAIProject ai2.txt
 ```
 
-Same as above, output goes to `ai2.txt`.
+Same as above, but writes to `ai2.txt`.
 
-```shell
+```bash
 runAIProject --tree
 ```
 
-Generates a directory tree and saves it to `ai.txt`.
+Outputs a directory tree structure to `ai.txt`.
 
-```shell
+```bash
 runAIProject ai2.txt --tree
 ```
 
-Generates a directory tree and saves it to `ai2.txt`.
+Outputs a directory tree structure to `ai2.txt`.
+
+```bash
+runAIProject --config=./config/ai-custom.json
+```
+
+Uses a custom configuration to control what is included or excluded.
