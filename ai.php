@@ -72,8 +72,8 @@ final class AIProjectDumper
 
         if (is_resource($outputHandle) && $outputHandle !== STDOUT) {
             fclose($outputHandle);
+            echo "AI-ready output written to: $this->outputPath".PHP_EOL;
         }
-        echo "AI-ready output written to: $this->outputPath".PHP_EOL;
     }
 
     private function writeHeader($handle, string $name): void
