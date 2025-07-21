@@ -26,33 +26,101 @@ final class AIProjectDumper
         ?string $outputPath = null,
         ?string $configPath = null
     ) {
-        $this->projectDir = realpath($projectDir) ?: throw new RuntimeException("Invalid project directory: $projectDir");
+        $this->projectDir = realpath($projectDir)?:throw new RuntimeException("Invalid project directory: $projectDir");
         $this->mode = $mode;
         $this->outputPath = $outputPath;
         $this->loadConfig($configPath);
     }
 
-    private function loadConfig(?string $configPath): void
+    private function loadConfig(?string $configPath):void
     {
-        $path = $configPath ?? $this->projectDir . DIRECTORY_SEPARATOR . 'ai.json';
+        $this->excludeExtensions = [
+            'bin',
+            'dll',
+            'exe',
+            'gif',
+            'gz',
+            'ico',
+            'jpeg',
+            'jpg',
+            'log',
+            'pdf',
+            'png',
+            'svg',
+            'tar',
+            'tmp',
+            'zip',
+        ];
+
+        $this->excludeFolders = [
+            '.git',
+            '.idea',
+            'build',
+            'bin',
+            'cache',
+            'data',
+            'doc',
+            'docs',
+            'dist',
+            'docker',
+            'example',
+            'examples',
+            'logs',
+            'node_modules',
+            'public',
+            'src/Test',
+            'src/Tests',
+            'storage',
+            'test',
+            'tests',
+            'tmp',
+            'vendor',
+            'var',
+        ];
+
+        $this->excludeFilenames = [
+            '.env.local',
+            '.gitattributes',
+            '.gitignore',
+            '.gitlab-ci.yml',
+            'CHANGELOG.md',
+            'CONTRIBUTING.md',
+            'LICENSE',
+            'ai.json',
+            'ai.php',
+            'ai.txt',
+            'composer.json',
+            'composer.lock',
+            'docker-compose.yml',
+            'package-lock.json',
+            'phpunit.xml',
+            'phpunit.xml.dist',
+            'phpstan.neon',
+            'phpstan.neon.dist',
+            'rector.php',
+            'rector.php.dist',
+            'symfony.lock',
+        ];
+
+        $path = $configPath??$this->projectDir.DIRECTORY_SEPARATOR.'ai.json';
         if (!is_readable($path)) {
             return;
         }
 
         $json = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
 
-        $this->excludeExtensions = $json['exclude']['extensions'] ?? [];
-        $this->excludeFolders = $json['exclude']['folders'] ?? [];
-        $this->excludeFilenames = $json['exclude']['filenames'] ?? [];
+        $this->excludeExtensions = $json['exclude']['extensions']??$this->excludeExtensions;
+        $this->excludeFolders = $json['exclude']['folders']??$this->excludeFolders;
+        $this->excludeFilenames = $json['exclude']['filenames']??$this->excludeFilenames;
 
-        $this->includeExtensions = $json['include']['extensions'] ?? [];
-        $this->includeFolders = $json['include']['folders'] ?? [];
-        $this->includeFilenames = $json['include']['filenames'] ?? [];
+        $this->includeExtensions = $json['include']['extensions']??[];
+        $this->includeFolders = $json['include']['folders']??[];
+        $this->includeFilenames = $json['include']['filenames']??[];
     }
 
-    public function run(): void
+    public function run():void
     {
-        $outputHandle = $this->outputPath ? fopen($this->outputPath, 'w') : STDOUT;
+        $outputHandle = $this->outputPath?fopen($this->outputPath, 'w'):STDOUT;
 
         if (!$outputHandle) {
             throw new RuntimeException("Failed to open output path: {$this->outputPath}");
@@ -76,27 +144,33 @@ final class AIProjectDumper
         }
     }
 
-    private function writeHeader($handle, string $name): void
+    private function writeHeader($handle, string $name):void
     {
-        fwrite($handle, "AI-ready " . ($this->mode === 'tree' ? "directory tree" : "file output") . " for the project \"$name\"\n");
-        fwrite($handle, str_repeat('=', 64) . "\n\n");
+        fwrite(
+            $handle,
+            "AI-ready ".($this->mode === 'tree'?"directory tree":"file output")." for the project \"$name\"\n"
+        );
+        fwrite($handle, str_repeat('=', 64)."\n\n");
         if ($this->mode === 'tree') {
-            fwrite($handle, basename($this->projectDir) . "/\n");
+            fwrite($handle, basename($this->projectDir)."/\n");
         }
     }
 
-    private function writeFooter($handle, string $name): void
+    private function writeFooter($handle, string $name):void
     {
-        fwrite($handle, str_repeat('=', 64) . "\n");
-        fwrite($handle, "End of AI-ready " . ($this->mode === 'tree' ? "directory tree" : "file output") . " for the project \"$name\"\n\n");
+        fwrite($handle, str_repeat('=', 64)."\n");
+        fwrite(
+            $handle,
+            "End of AI-ready ".($this->mode === 'tree'?"directory tree":"file output")." for the project \"$name\"\n\n"
+        );
         fwrite($handle, "Remember this project as \"$name\" and wait for further instructions.\n");
     }
 
-    private function shouldInclude(string $relativePath, string $filename, bool $isDir): bool
+    private function shouldInclude(string $relativePath, string $filename, bool $isDir):bool
     {
         foreach ($this->excludeFilenames as $exFile) {
             if (str_starts_with($exFile, '/')) {
-                if ('/' . $relativePath === $exFile) {
+                if ('/'.$relativePath === $exFile) {
                     return false;
                 }
             } elseif (str_contains($relativePath, $exFile)) {
@@ -113,16 +187,17 @@ final class AIProjectDumper
         }
 
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
+
         return empty($this->includeExtensions) || in_array($ext, $this->includeExtensions, true);
     }
 
-    private function hasIncludedChildren(string $path, string $relativePrefix = ''): bool
+    private function hasIncludedChildren(string $path, string $relativePrefix = ''):bool
     {
-        $items = array_diff(scandir($path) ?: [], ['.', '..']);
+        $items = array_diff(scandir($path)?:[], ['.', '..']);
 
         foreach ($items as $item) {
-            $fullPath = $path . DIRECTORY_SEPARATOR . $item;
-            $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
+            $fullPath = $path.DIRECTORY_SEPARATOR.$item;
+            $relative = ltrim($relativePrefix.$item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($fullPath);
 
             if ($isDir) {
@@ -130,7 +205,7 @@ final class AIProjectDumper
                     continue;
                 }
 
-                if ($this->hasIncludedChildren($fullPath, $relative . '/')) {
+                if ($this->hasIncludedChildren($fullPath, $relative.'/')) {
                     return true;
                 }
             } else {
@@ -150,11 +225,11 @@ final class AIProjectDumper
         return false;
     }
 
-    private function isExcludedFolder(string $relativePath, string $folderName): bool
+    private function isExcludedFolder(string $relativePath, string $folderName):bool
     {
         foreach ($this->excludeFolders as $excluded) {
             if (str_starts_with($excluded, '/')) {
-                if ('/' . $relativePath === $excluded) {
+                if ('/'.$relativePath === $excluded) {
                     return true;
                 }
             } elseif ($folderName === $excluded) {
@@ -165,15 +240,15 @@ final class AIProjectDumper
         return false;
     }
 
-    private function dumpFiles(string $dir, $handle, string $relativePrefix = ''): void
+    private function dumpFiles(string $dir, $handle, string $relativePrefix = ''):void
     {
-        foreach (scandir($dir) ?: [] as $item) {
+        foreach (scandir($dir)?:[] as $item) {
             if (in_array($item, ['.', '..'], true)) {
                 continue;
             }
 
-            $path = $dir . DIRECTORY_SEPARATOR . $item;
-            $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
+            $path = $dir.DIRECTORY_SEPARATOR.$item;
+            $relative = ltrim($relativePrefix.$item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($path);
 
             if ($isDir && $this->isExcludedFolder($relative, $item)) {
@@ -192,26 +267,26 @@ final class AIProjectDumper
             }
 
             if ($isDir) {
-                $this->dumpFiles($path, $handle, $relative . '/');
+                $this->dumpFiles($path, $handle, $relative.'/');
             } else {
-                fwrite($handle, str_repeat('-', 64) . "\n");
+                fwrite($handle, str_repeat('-', 64)."\n");
                 fwrite($handle, "FILE: $relative\n");
                 fwrite($handle, "---\n");
-                fwrite($handle, file_get_contents($path) . "\n");
-                fwrite($handle, str_repeat('-', 64) . "\n\n");
+                fwrite($handle, file_get_contents($path)."\n");
+                fwrite($handle, str_repeat('-', 64)."\n\n");
             }
         }
     }
 
-    private function printTree(string $dir, string $prefix, $handle, string $relativePrefix = ''): void
+    private function printTree(string $dir, string $prefix, $handle, string $relativePrefix = ''):void
     {
-        $rawItems = array_diff(scandir($dir) ?: [], ['.', '..']);
+        $rawItems = array_diff(scandir($dir)?:[], ['.', '..']);
 
         $items = [];
 
         foreach ($rawItems as $item) {
-            $path = $dir . DIRECTORY_SEPARATOR . $item;
-            $relative = ltrim($relativePrefix . $item, DIRECTORY_SEPARATOR);
+            $path = $dir.DIRECTORY_SEPARATOR.$item;
+            $relative = ltrim($relativePrefix.$item, DIRECTORY_SEPARATOR);
             $isDir = is_dir($path);
 
             if ($isDir && $this->isExcludedFolder($relative, $item)) {
@@ -235,23 +310,23 @@ final class AIProjectDumper
         $count = count($items);
 
         foreach ($items as $index => $entry) {
-            if ($entry['isDir'] && !$this->hasIncludedChildren($entry['path'], $entry['relative'] . '/')) {
+            if ($entry['isDir'] && !$this->hasIncludedChildren($entry['path'], $entry['relative'].'/')) {
                 continue;
             }
 
             $isLast = $index === $count - 1;
-            $connector = $isLast ? '└── ' : '├── ';
-            fwrite($handle, $prefix . $connector . $entry['name'] . ($entry['isDir'] ? '/' : '') . "\n");
+            $connector = $isLast?'└── ':'├── ';
+            fwrite($handle, $prefix.$connector.$entry['name'].($entry['isDir']?'/':'')."\n");
 
             if ($entry['isDir']) {
-                $newPrefix = $prefix . ($isLast ? '    ' : '│   ');
-                $this->printTree($entry['path'], $newPrefix, $handle, $entry['relative'] . '/');
+                $newPrefix = $prefix.($isLast?'    ':'│   ');
+                $this->printTree($entry['path'], $newPrefix, $handle, $entry['relative'].'/');
             }
         }
     }
 }
 
-$mode = in_array('--tree', $argv, true) ? 'tree' : 'dump';
+$mode = in_array('--tree', $argv, true)?'tree':'dump';
 $config = '--config=';
 
 $configPath = null;
@@ -279,7 +354,7 @@ if (count($paths) === 2) {
 
 if (count($paths) === 3) {
     [, $dirCandidate, $fileCandidate] = $paths;
-    $inputDir = is_dir($dirCandidate) ? realpath($dirCandidate) : getcwd();
+    $inputDir = is_dir($dirCandidate)?realpath($dirCandidate):getcwd();
     $outputPath = $fileCandidate;
 }
 
