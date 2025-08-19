@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+/**
+ * AIProjectDumper - A tool to prepare projects for AI analysis.
+ *
+ * (c) 2025 Juergen Schwind <info@juergen-schwind.de>
+ * GitHub: https://github.com/jschwind/phpcli-ai
+ *
+ * MIT License
+ *
+ */
+
 namespace AIDumper;
 
 use RuntimeException;
