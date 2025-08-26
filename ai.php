@@ -242,7 +242,19 @@ final class AIProjectDumper
         // File include logic
         $hasAnyInclude = !empty($this->includeExtensions) || !empty($this->includeFolders) || !empty($this->includeFilenames);
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        $matchByName = !empty($this->includeFilenames) && in_array($filename, $this->includeFilenames, true);
+        // Normalize relative path to forward slashes without leading slash for matching
+        $relNorm = ltrim(str_replace('\\', '/', $relativePath), '/');
+        $incFiles = array_map(function($f){ return ltrim(str_replace('\\', '/', (string)$f), '/'); }, $this->includeFilenames);
+        $matchByName = false;
+        if (!empty($incFiles)) {
+            // Match by:
+            // - exact basename
+            // - exact relative path
+            // - exact relative path when config provided with leading slash
+            $matchByName = in_array($filename, $incFiles, true)
+                || in_array($relNorm, $incFiles, true)
+                || in_array('/'.$relNorm, $this->includeFilenames, true);
+        }
         $matchByExt = !empty($this->includeExtensions) && in_array($ext, $this->includeExtensions, true);
         $within = $isWithinInclude($relativePath, false);
 
