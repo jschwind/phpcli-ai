@@ -2,11 +2,11 @@
   "exclude": {
     "extensions": [],
     "folders": [],
-    "filenames": []
+    "filenames": ["test.json"]
   },
   "include": {
     "extensions": [],
     "folders": [],
-    "filenames": ["lvl2/test.txt"]
+    "filenames": []
   }
 }

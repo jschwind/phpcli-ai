@@ -1,12 +1,12 @@
 {
   "exclude": {
     "extensions": [],
-    "folders": [],
+    "folders": ["lvl1"],
     "filenames": []
   },
   "include": {
     "extensions": [],
     "folders": [],
-    "filenames": ["lvl2/test.txt"]
+    "filenames": []
   }
 }

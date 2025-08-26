@@ -2,7 +2,11 @@ AI-ready directory tree for the project "assets"
 ================================================================
 
 assets/
-└── lvl2/
+└── lvl1/
+    ├── lvl1-1/
+    │   └── test.txt
+    ├── lvl1-2/
+    │   └── test.txt
     └── test.txt
 ================================================================
 End of AI-ready directory tree for the project "assets"

@@ -3,7 +3,23 @@ AI-ready directory tree for the project "assets"
 
 assets/
 ├── lvl1/
-│   ├── lvl2/
+│   ├── lvl1-1/
+│   │   ├── test.json
+│   │   ├── test.php
+│   │   └── test.txt
+│   ├── lvl1-2/
+│   │   ├── test.json
+│   │   ├── test.php
+│   │   └── test.txt
+│   ├── test.json
+│   ├── test.php
+│   └── test.txt
+├── lvl2/
+│   ├── lvl2-1/
+│   │   ├── test.json
+│   │   ├── test.php
+│   │   └── test.txt
+│   ├── lvl2-2/
 │   │   ├── test.json
 │   │   ├── test.php
 │   │   └── test.txt

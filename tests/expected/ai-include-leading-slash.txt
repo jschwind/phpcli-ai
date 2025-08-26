@@ -2,8 +2,8 @@ AI-ready directory tree for the project "assets"
 ================================================================
 
 assets/
-└── lvl2/
-    └── test.txt
+└── lvl1/
+    └── test.json
 ================================================================
 End of AI-ready directory tree for the project "assets"
 

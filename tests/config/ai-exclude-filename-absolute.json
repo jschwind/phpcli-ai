@@ -2,11 +2,11 @@
   "exclude": {
     "extensions": [],
     "folders": [],
-    "filenames": []
+    "filenames": ["/lvl2/lvl2-1/test.php"]
   },
   "include": {
     "extensions": [],
     "folders": [],
-    "filenames": ["lvl2/test.txt"]
+    "filenames": []
   }
 }
