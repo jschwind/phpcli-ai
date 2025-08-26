@@ -397,13 +397,18 @@ final class AIProjectDumper
             $items[] = ['name' => $item, 'path' => $path, 'relative' => $relative, 'isDir' => $isDir];
         }
 
-        $count = count($items);
-
-        foreach ($items as $index => $entry) {
-            if ($entry['isDir'] && !$this->hasIncludedChildren($entry['path'], $entry['relative'].'/')) {
+        // Build the final list of visible items (exclude empty directories) before rendering
+        $visible = [];
+        foreach ($items as $e) {
+            if ($e['isDir'] && !$this->hasIncludedChildren($e['path'], $e['relative'].'/')) {
                 continue;
             }
+            $visible[] = $e;
+        }
 
+        $count = count($visible);
+
+        foreach ($visible as $index => $entry) {
             $isLast = $index === $count - 1;
             $connector = $isLast?'└── ':'├── ';
             fwrite($handle, $prefix.$connector.$entry['name'].($entry['isDir']?'/':'')."\n");
