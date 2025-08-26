@@ -21,6 +21,7 @@ final class AIProjectDumper
     private string $projectDir;
     private string $mode;
     private ?string $outputPath;
+    private string $projectRootName;
 
     private array $includeExtensions = [];
     private array $includeFolders = [];
@@ -39,6 +40,7 @@ final class AIProjectDumper
         $this->projectDir = realpath($projectDir)?:throw new RuntimeException("Invalid project directory: $projectDir");
         $this->mode = $mode;
         $this->outputPath = $outputPath;
+        $this->projectRootName = basename($this->projectDir);
         $this->loadConfig($configPath);
     }
 
@@ -178,6 +180,7 @@ final class AIProjectDumper
 
     private function shouldInclude(string $relativePath, string $filename, bool $isDir):bool
     {
+        // Exclude by filename (supports absolute-like "/path" entries and substring matches)
         foreach ($this->excludeFilenames as $exFile) {
             if (str_starts_with($exFile, '/')) {
                 if ('/'.$relativePath === $exFile) {
@@ -188,17 +191,70 @@ final class AIProjectDumper
             }
         }
 
-        if ($isDir) {
-            return empty($this->includeFolders) || in_array($filename, $this->includeFolders, true);
-        }
+        // Helper to check whether a path is inside or on the way to any of the include folders
+        $isWithinInclude = function(string $relPath, bool $dir) : bool {
+            if (empty($this->includeFolders)) {
+                return true;
+            }
+            $path = ltrim($relPath, '/');
+            $path = str_replace('\\', '/', $path);
 
-        if (!empty($this->includeFilenames) && !in_array($filename, $this->includeFilenames, true)) {
+            // For files, compare the directory part
+            if (!$dir) {
+                $lastSlash = strrpos($path, '/');
+                $pathDir = $lastSlash !== false ? substr($path, 0, $lastSlash) : '';
+                foreach ($this->includeFolders as $inc) {
+                    $inc = trim(str_replace('\\', '/', $inc), '/');
+                    if ($inc === '') { continue; }
+                    if ($pathDir !== '' && str_starts_with($pathDir, $inc)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // For directories, allow if the directory is a parent of, equal to, or inside an include folder
+            foreach ($this->includeFolders as $inc) {
+                $inc = trim(str_replace('\\', '/', $inc), '/');
+                if ($inc === '') { continue; }
+                if ($path === '' || $path === '.') {
+                    // root level: only traverse into parents of include folders
+                    if (str_contains($inc, '/')) {
+                        return true; // we need to descend from root
+                    }
+                }
+                if ($path === $inc || str_starts_with($inc, $path.'/') || str_starts_with($path, $inc.'/')) {
+                    return true;
+                }
+                // Also allow exact segment when includeFolders contains only a top-level segment name
+                if ($path === $inc) {
+                    return true;
+                }
+            }
             return false;
+        };
+
+        // Directory include logic: traverse only within the include scope when includeFolders are provided
+        if ($isDir) {
+            return $isWithinInclude($relativePath, true);
         }
 
+        // File include logic
+        $hasAnyInclude = !empty($this->includeExtensions) || !empty($this->includeFolders) || !empty($this->includeFilenames);
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        $matchByName = !empty($this->includeFilenames) && in_array($filename, $this->includeFilenames, true);
+        $matchByExt = !empty($this->includeExtensions) && in_array($ext, $this->includeExtensions, true);
+        $within = $isWithinInclude($relativePath, false);
 
-        return empty($this->includeExtensions) || in_array($ext, $this->includeExtensions, true);
+        if (!$hasAnyInclude) {
+            return true;
+        }
+
+        if (!empty($this->includeFolders)) {
+            return $within && ($matchByName || $matchByExt);
+        }
+
+        return $matchByName || $matchByExt;
     }
 
     private function hasIncludedChildren(string $path, string $relativePrefix = ''):bool
@@ -272,13 +328,17 @@ final class AIProjectDumper
                 }
             }
 
-            if (!$this->shouldInclude($relative, $item, $isDir)) {
-                continue;
-            }
-
             if ($isDir) {
+                // For directories, allow traversal if either the directory itself matches includeFolders
+                // or it has any included children deeper in the tree.
+                if (!$this->shouldInclude($relative, $item, true) && !$this->hasIncludedChildren($path, $relative.'/')) {
+                    continue;
+                }
                 $this->dumpFiles($path, $handle, $relative.'/');
             } else {
+                if (!$this->shouldInclude($relative, $item, false)) {
+                    continue;
+                }
                 fwrite($handle, str_repeat('-', 64)."\n");
                 fwrite($handle, "FILE: $relative\n");
                 fwrite($handle, "---\n");
@@ -310,8 +370,16 @@ final class AIProjectDumper
                 }
             }
 
-            if (!$this->shouldInclude($relative, $item, $isDir)) {
-                continue;
+            if ($isDir) {
+                // Keep directories that either match includeFolders or have included children,
+                // so the tree shows the path down to included files.
+                if (!$this->shouldInclude($relative, $item, true) && !$this->hasIncludedChildren($path, $relative.'/')) {
+                    continue;
+                }
+            } else {
+                if (!$this->shouldInclude($relative, $item, false)) {
+                    continue;
+                }
             }
 
             $items[] = ['name' => $item, 'path' => $path, 'relative' => $relative, 'isDir' => $isDir];
