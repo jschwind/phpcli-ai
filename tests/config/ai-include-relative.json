@@ -7,6 +7,6 @@
   "include": {
     "extensions": [],
     "folders": [],
-    "filenames": []
+    "filenames": ["lvl1/lvl2/test.txt"]
   }
 }

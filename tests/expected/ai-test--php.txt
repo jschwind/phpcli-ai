@@ -1,0 +1,16 @@
+AI-ready directory tree for the project "assets"
+================================================================
+
+assets/
+├── lvl1/
+│   ├── lvl2/
+│   │   ├── test.json
+│   │   └── test.txt
+│   ├── test.json
+│   └── test.txt
+├── test.json
+└── test.txt
+================================================================
+End of AI-ready directory tree for the project "assets"
+
+Remember this project as "assets" and wait for further instructions.
